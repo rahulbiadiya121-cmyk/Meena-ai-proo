@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">MEENA AI PRO</string>
+    <string name="app_tagline">Your Personal AI Companion</string>
+    <string name="notification_listener_label">MEENA AI PRO Smart Reader</string>
+    <string name="tap_to_talk">Tap to Talk</string>
+    <string name="ask_meena_placeholder">Ask Meena anything…</string>
+    <string name="firebase_notice_banner">Preview AI Mode: Live Gemini intelligence requires Firebase AI Logic. Connect a Groq or ElevenLabs key in Connections for live cloud chat &amp; voice.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_voice">Voice</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+</resources>

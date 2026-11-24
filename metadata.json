@@ -1,0 +1,6 @@
+{
+  "name": "MEENA AI PRO",
+  "description": "Your Personal AI Companion — futuristic voice, chat, image creation, phone control, and smart memory powered by Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
