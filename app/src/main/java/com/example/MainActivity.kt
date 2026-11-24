@@ -5,74 +5,76 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DrawerValue
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import com.example.system.VoiceCommandIntent
-import com.example.ui.MeenaViewModel
-import com.example.ui.components.CosmicBackground
-import com.example.ui.components.GlassCard
-import com.example.ui.components.MeenaBottomBar
-import com.example.ui.components.MeenaCharacterAvatar
-import com.example.ui.components.MeenaDrawerContent
-import com.example.ui.components.Routes
-import com.example.ui.screens.CharactersScreen
-import com.example.ui.screens.ChatScreen
-import com.example.ui.screens.ConnectionsScreen
-import com.example.ui.screens.HistoryScreen
-import com.example.ui.screens.HomeScreen
-import com.example.ui.screens.ImageGenScreen
-import com.example.ui.screens.MemoryScreen
-import com.example.ui.screens.PhoneControlScreen
-import com.example.ui.screens.QuickActionsScreen
-import com.example.ui.screens.SettingsScreen
-import com.example.ui.screens.VoiceAssistantScreen
-import com.example.ui.screens.WriteStudioScreen
-import com.example.ui.theme.LocalMeenaGlow
-import com.example.ui.theme.MeenaAiProTheme
+import com.example.data.repository.ChatMessage
+import com.example.ui.GeminiScreenState
+import com.example.ui.GeminiUiState
+import com.example.ui.GeminiViewModel
+import com.example.ui.theme.BrightViolet
+import com.example.ui.theme.CosmicBlack
+import com.example.ui.theme.ErrorRed
+import com.example.ui.theme.GlassSurface
+import com.example.ui.theme.MidnightVoid
+import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.NeonViolet
+import com.example.ui.theme.SoftBlue
+import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,14 +84,14 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
         setContent {
-            val viewModel: MeenaViewModel = viewModel()
-            val appState by viewModel.state.collectAsStateWithLifecycle()
-            val audioLevel by viewModel.voiceEngine.audioLevel.collectAsStateWithLifecycle()
-
-            MeenaAiProTheme(themeAccent = appState.settings.themeAccent) {
-                MeenaAppRoot(
-                    viewModel = viewModel,
-                    audioLevel = audioLevel
+            MyApplicationTheme {
+                val viewModel: GeminiViewModel = viewModel()
+                val state by viewModel.state.collectAsStateWithLifecycle()
+                GeminiCompanionScreen(
+                    state = state,
+                    onSendPrompt = viewModel::sendPrompt,
+                    onSelectModel = viewModel::setModel,
+                    onClear = viewModel::clearConversation
                 )
             }
         }
@@ -97,271 +99,212 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MeenaAppRoot(
-    viewModel: MeenaViewModel,
-    audioLevel: Float
+fun GeminiCompanionScreen(
+    state: GeminiScreenState,
+    onSendPrompt: (String) -> Unit,
+    onSelectModel: (String) -> Unit,
+    onClear: () -> Unit
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val navController = rememberNavController()
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    var inputText by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        viewModel.toastEvents.collect { msg ->
-            snackbarHostState.showSnackbar(msg)
-        }
-    }
-
-    fun navigateTo(route: String) {
-        navController.navigate(route) {
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
-
-    CosmicBackground(reduceMotion = state.settings.reduceMotion) {
-        if (!state.settings.isSignedIn) {
-            CompanionWelcomeGate(
-                state = state,
-                onSignIn = { name, handle, email ->
-                    viewModel.signInProfile(name, handle, email)
-                }
-            )
-        } else {
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    MeenaDrawerContent(
-                        currentRoute = currentRoute,
-                        character = state.settings.selectedCharacter,
-                        assistantName = state.settings.assistantName,
-                        userName = state.settings.userName,
-                        onNavigate = { route ->
-                            scope.launch { drawerState.close() }
-                            navigateTo(route)
-                        }
-                    )
-                }
+    Scaffold(
+        containerColor = CosmicBlack,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { innerPadding ->
+        Box(
+            contentAlignment = Alignment.TopCenter,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(CosmicBlack, MidnightVoid, CosmicBlack)))
+                .padding(innerPadding)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 680.dp)
+                    .padding(horizontal = 16.dp)
             ) {
-                Scaffold(
-                    containerColor = Color.Transparent,
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-                    bottomBar = {
-                        MeenaBottomBar(
-                            currentRoute = currentRoute,
-                            character = state.settings.selectedCharacter,
-                            onNavigate = { route -> navigateTo(route) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            tint = SoftBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "MEENA AI PRO",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (state.isKeyConfigured) "BuildConfig Key Ready" else "Add GEMINI_API_KEY in Secrets",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (state.isKeyConfigured) SuccessGreen else ErrorRed
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onClear,
+                        modifier = Modifier.testTag("clear_chat_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.DeleteOutline,
+                            contentDescription = "Clear conversation",
+                            tint = TextSecondary
                         )
                     }
-                ) { innerPadding ->
-                    Box(
-                        contentAlignment = Alignment.TopCenter,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                            .windowInsetsPadding(WindowInsets.statusBars)
-                    ) {
-                        NavHost(
-                            navController = navController,
-                            startDestination = Routes.HOME,
-                            enterTransition = { fadeIn() },
-                            exitTransition = { fadeOut() }
-                        ) {
-                            composable(Routes.HOME) {
-                                HomeScreen(
-                                    state = state,
-                                    audioLevel = audioLevel,
-                                    hasAudioPermission = viewModel.phoneControl.hasRecordAudioPermission(),
-                                    onOpenDrawer = { scope.launch { drawerState.open() } },
-                                    onNavigate = { navigateTo(it) },
-                                    onStartVoice = { viewModel.startVoiceListening() },
-                                    onStopVoice = { viewModel.stopVoiceListening() },
-                                    onSendPrompt = { q ->
-                                        navigateTo(Routes.CHAT)
-                                        viewModel.sendChatMessage(q)
-                                    }
-                                )
-                            }
+                }
 
-                            composable(Routes.VOICE) {
-                                VoiceAssistantScreen(
-                                    state = state,
-                                    audioLevel = audioLevel,
-                                    hasAudioPermission = viewModel.phoneControl.hasRecordAudioPermission(),
-                                    onBack = { navController.popBackStack() },
-                                    onStartListen = { viewModel.startVoiceListening() },
-                                    onStopListen = { viewModel.stopVoiceListening() },
-                                    onInterrupt = { viewModel.interruptVoice() },
-                                    onSubmitTextVoice = { viewModel.processVoiceTranscript(it) },
-                                    onExecuteCommand = { cmd ->
-                                        viewModel.clearPendingVoiceCommand()
-                                        when (cmd) {
-                                            is VoiceCommandIntent.OpenApp -> {
-                                                viewModel.phoneControl.launchAppByName(cmd.appQuery)
-                                                    .onFailure { err ->
-                                                        scope.launch { snackbarHostState.showSnackbar(err.message ?: "App not found") }
-                                                    }
-                                            }
-                                            is VoiceCommandIntent.Call -> {
-                                                viewModel.phoneControl.placeCall(cmd.target)
-                                            }
-                                            is VoiceCommandIntent.OpenAlarm -> {
-                                                viewModel.phoneControl.setAlarm(7, 0, "Meena Voice Alarm")
-                                            }
-                                            is VoiceCommandIntent.CheckWeather -> {
-                                                navigateTo(Routes.QUICK_ACTIONS)
-                                            }
-                                            is VoiceCommandIntent.Flashlight -> {}
-                                        }
-                                    },
-                                    onDismissCommand = { viewModel.clearPendingVoiceCommand() },
-                                    onUpdateSettings = { viewModel.updateSettings(it) },
-                                    onTestVoice = { viewModel.testCurrentVoice() },
-                                    onOpenConnections = { navigateTo(Routes.CONNECTIONS) }
-                                )
-                            }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    listOf("gemini-3.8-flash", "gemini-3.5-flash-lite").forEach { modelId ->
+                        FilterChip(
+                            selected = state.selectedModel == modelId,
+                            onClick = { onSelectModel(modelId) },
+                            label = { Text(modelId) }
+                        )
+                    }
+                }
 
-                            composable(Routes.CHAT) {
-                                ChatScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onSendMessage = { viewModel.sendChatMessage(it) },
-                                    onRegenerate = { viewModel.regenerateLastResponse() },
-                                    onNewConversation = { viewModel.startNewConversation() },
-                                    onClearChat = { viewModel.clearCurrentChat() },
-                                    onSearchQueryChange = { viewModel.setChatSearchQuery(it) },
-                                    onAttachImageUri = { viewModel.setAttachedImageUri(it) },
-                                    onToggleGroq = { viewModel.toggleGroqPreferred(it) },
-                                    onSpeakAloud = { viewModel.speakTextAloud(it) },
-                                    onSaveToMemory = { viewModel.addManualMemory(it, "Context") },
-                                    onOpenVoice = { navigateTo(Routes.VOICE) },
-                                    onOpenConnections = { navigateTo(Routes.CONNECTIONS) }
-                                )
-                            }
-
-                            composable(Routes.HISTORY) {
-                                HistoryScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onOpenConversation = { id ->
-                                        viewModel.selectConversation(id)
-                                        navigateTo(Routes.CHAT)
-                                    },
-                                    onNewChat = {
-                                        viewModel.startNewConversation()
-                                        navigateTo(Routes.CHAT)
-                                    },
-                                    onDeleteConversation = { viewModel.deleteConversation(it) },
-                                    onClearAllHistory = { viewModel.clearAllHistory() }
-                                )
-                            }
-
-                            composable(Routes.CHARACTERS) {
-                                CharactersScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onSelectCharacter = { char ->
-                                        viewModel.updateSettings { it.copy(selectedCharacter = char) }
-                                        scope.launch { snackbarHostState.showSnackbar("${char.displayName} is now your active companion") }
-                                    },
-                                    onTestGreeting = { greeting -> viewModel.speakTextAloud(greeting) }
-                                )
-                            }
-
-                            composable(Routes.CONNECTIONS) {
-                                ConnectionsScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onSaveKey = { provider, key -> viewModel.saveApiKey(provider, key) },
-                                    onClearKey = { provider -> viewModel.clearApiKey(provider) },
-                                    onTestConnection = { provider -> viewModel.testConnection(provider) }
-                                )
-                            }
-
-                            composable(Routes.QUICK_ACTIONS) {
-                                QuickActionsScreen(
-                                    state = state,
-                                    phoneControl = viewModel.phoneControl,
-                                    onBack = { navController.popBackStack() },
-                                    onNavigate = { navigateTo(it) },
-                                    onToggleEnabled = { viewModel.toggleQuickActionEnabled(it) },
-                                    onTogglePinned = { viewModel.toggleQuickActionPinned(it) },
-                                    onMoveUp = { viewModel.moveQuickActionUp(it) },
-                                    onFetchWeather = { viewModel.fetchWeatherForCity(it) },
-                                    onAskMeenaTranslate = { prompt ->
-                                        navigateTo(Routes.CHAT)
-                                        viewModel.sendChatMessage(prompt)
-                                    },
-                                    onFeedback = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
-                                )
-                            }
-
-                            composable(Routes.IMAGE_GEN) {
-                                ImageGenScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onGenerate = { p, s, q, r -> viewModel.generateAiImage(p, s, q, r) },
-                                    onDeleteImage = { viewModel.deleteGeneratedImage(it) },
-                                    onSharePrompt = { viewModel.shareText(it) },
-                                    onOpenConnections = { navigateTo(Routes.CONNECTIONS) }
-                                )
-                            }
-
-                            composable(Routes.WRITE) {
-                                WriteStudioScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onGenerate = { c, t, p -> viewModel.generateWrittenContent(c, t, p) },
-                                    onShare = { viewModel.shareText(it) },
-                                    onSaveMemory = { viewModel.addManualMemory(it, "Context") },
-                                    onOpenConnections = { navigateTo(Routes.CONNECTIONS) }
-                                )
-                            }
-
-                            composable(Routes.PHONE_CONTROL) {
-                                PhoneControlScreen(
-                                    state = state,
-                                    phoneControl = viewModel.phoneControl,
-                                    onBack = { navController.popBackStack() },
-                                    onToggleFlashlight = { viewModel.toggleFlashlight() },
-                                    onVolumeChange = { viewModel.setMediaVolume(it) },
-                                    onOpenSetting = { viewModel.openSystemSetting(it) },
-                                    onRefreshApps = { viewModel.refreshInstalledApps() },
-                                    onFeedback = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
-                                )
-                            }
-
-                            composable(Routes.MEMORY) {
-                                MemoryScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onToggleMemoryEnabled = { enabled ->
-                                        viewModel.updateSettings { it.copy(memoryEnabled = enabled) }
-                                    },
-                                    onAddMemory = { fact, cat -> viewModel.addManualMemory(fact, cat) },
-                                    onDeleteMemory = { viewModel.deleteMemory(it) },
-                                    onClearAllMemories = { viewModel.clearAllMemories() },
-                                    onClearAllHistory = { viewModel.clearAllHistory() }
-                                )
-                            }
-
-                            composable(Routes.SETTINGS) {
-                                SettingsScreen(
-                                    state = state,
-                                    onBack = { navController.popBackStack() },
-                                    onNavigate = { navigateTo(it) },
-                                    onUpdateSettings = { viewModel.updateSettings(it) },
-                                    onTestVoice = { viewModel.testCurrentVoice() },
-                                    onSignOut = { viewModel.signOut() },
-                                    onDeleteAccount = { viewModel.deleteAccountAndWipeData() },
-                                    onClearHistory = { viewModel.clearAllHistory() }
-                                )
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (state.messages.isEmpty()) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(18.dp),
+                                color = GlassSurface,
+                                border = BorderStroke(1.dp, NeonViolet.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Gemini API Repository Connected",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Requests use NetworkGeminiRepository via Retrofit with BuildConfig.GEMINI_API_KEY in the x-goog-api-key header.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary
+                                    )
+                                }
                             }
                         }
+                    }
+
+                    items(state.messages, key = { "${it.timestamp}_${it.isUser}_${it.text.hashCode()}" }) { msg ->
+                        MessageCard(message = msg)
+                    }
+
+                    when (val ui = state.uiState) {
+                        is GeminiUiState.Loading -> {
+                            item {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = SoftBlue,
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Calling Gemini API…", color = TextSecondary)
+                                }
+                            }
+                        }
+                        is GeminiUiState.Error -> {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = ErrorRed.copy(alpha = 0.14f),
+                                    border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = ui.message,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = ErrorRed,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        placeholder = { Text("Ask Meena anything…", color = TextMuted) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(
+                            onSend = {
+                                if (inputText.isNotBlank()) {
+                                    onSendPrompt(inputText)
+                                    inputText = ""
+                                }
+                            }
+                        ),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = GlassSurface,
+                            unfocusedContainerColor = GlassSurface.copy(alpha = 0.7f),
+                            focusedBorderColor = NeonViolet,
+                            unfocusedBorderColor = BrightViolet.copy(alpha = 0.3f),
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("prompt_input")
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = {
+                            if (inputText.isNotBlank()) {
+                                onSendPrompt(inputText)
+                                inputText = ""
+                            }
+                        },
+                        enabled = inputText.isNotBlank() && state.uiState !is GeminiUiState.Loading,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(NeonViolet, SoftBlue)))
+                            .testTag("send_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Send,
+                            contentDescription = "Send prompt",
+                            tint = Color.White
+                        )
                     }
                 }
             }
@@ -370,72 +313,26 @@ private fun MeenaAppRoot(
 }
 
 @Composable
-private fun CompanionWelcomeGate(
-    state: com.example.ui.state.MeenaAppState,
-    onSignIn: (name: String, handle: String, email: String) -> Unit
-) {
-    val glow = LocalMeenaGlow.current
-    var name by remember { mutableStateOf(state.settings.userName) }
-    var handle by remember { mutableStateOf(state.settings.userHandle) }
-    var email by remember { mutableStateOf(state.settings.accountEmail) }
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(24.dp)
+private fun MessageCard(message: ChatMessage) {
+    Column(
+        horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        GlassCard(modifier = Modifier.widthIn(max = 460.dp)) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                MeenaCharacterAvatar(
-                    character = state.settings.selectedCharacter,
-                    reduceMotion = state.settings.reduceMotion,
-                    size = 132.dp
-                )
-                Text("MEENA AI PRO", style = MaterialTheme.typography.headlineMedium, color = TextPrimary)
-                Text(
-                    "Your Personal AI Companion",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = glow.secondaryGlow
-                )
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Your Name") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = handle,
-                    onValueChange = { handle = it },
-                    label = { Text("Username") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email (Local Profile)") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Button(
-                    onClick = { onSignIn(name, handle, email) },
-                    colors = ButtonDefaults.buttonColors(containerColor = glow.primaryGlow),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
-                ) {
-                    Text("Enter MEENA AI PRO", color = TextPrimary)
-                }
-            }
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = if (message.isUser) NeonViolet.copy(alpha = 0.25f) else GlassSurface,
+            border = BorderStroke(
+                width = 1.dp,
+                color = if (message.isUser) NeonViolet.copy(alpha = 0.55f) else SoftBlue.copy(alpha = 0.3f)
+            ),
+            modifier = Modifier.widthIn(max = 520.dp)
+        ) {
+            Text(
+                text = message.text,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                modifier = Modifier.padding(14.dp)
+            )
         }
     }
 }

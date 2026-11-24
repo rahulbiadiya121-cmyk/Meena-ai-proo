@@ -10,7 +10,6 @@ import com.example.R
 
 val DisplayFontFamily = FontFamily(
     Font(R.font.space_grotesk, FontWeight.Normal),
-    Font(R.font.space_grotesk, FontWeight.Medium),
     Font(R.font.space_grotesk, FontWeight.SemiBold),
     Font(R.font.space_grotesk, FontWeight.Bold)
 )
@@ -18,33 +17,17 @@ val DisplayFontFamily = FontFamily(
 val BodyFontFamily = FontFamily(
     Font(R.font.plus_jakarta_sans, FontWeight.Normal),
     Font(R.font.plus_jakarta_sans, FontWeight.Medium),
-    Font(R.font.plus_jakarta_sans, FontWeight.SemiBold),
-    Font(R.font.plus_jakarta_sans, FontWeight.Bold)
+    Font(R.font.plus_jakarta_sans, FontWeight.SemiBold)
 )
 
 val MonoFontFamily = FontFamily(
-    Font(R.font.jetbrains_mono, FontWeight.Normal),
-    Font(R.font.jetbrains_mono, FontWeight.Medium)
+    Font(R.font.jetbrains_mono, FontWeight.Normal)
 )
 
-val MeenaTypography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = DisplayFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,
-        lineHeight = 42.sp,
-        letterSpacing = (-0.5).sp
-    ),
-    headlineLarge = TextStyle(
-        fontFamily = DisplayFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
-        letterSpacing = (-0.25).sp
-    ),
+val Typography = Typography(
     headlineMedium = TextStyle(
         fontFamily = DisplayFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp
     ),
@@ -53,12 +36,6 @@ val MeenaTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 24.sp
-    ),
-    titleMedium = TextStyle(
-        fontFamily = BodyFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = BodyFontFamily,
@@ -78,25 +55,10 @@ val MeenaTypography = Typography(
         fontSize = 12.sp,
         lineHeight = 16.sp
     ),
-    labelLarge = TextStyle(
-        fontFamily = DisplayFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.25.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = BodyFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.3.sp
-    ),
     labelSmall = TextStyle(
         fontFamily = MonoFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Normal,
         fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.4.sp
+        lineHeight = 14.sp
     )
 )
